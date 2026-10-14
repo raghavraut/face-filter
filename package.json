@@ -10,6 +10,6 @@
     "dev": "node scripts/serve.mjs",
     "start": "node scripts/serve.mjs",
     "build": "node scripts/build.mjs",
-    "check": "node --check app.js && node --check scripts/serve.mjs && node --check scripts/build.mjs"
+    "check": "node --check app.js && node --check scripts/serve.mjs && node --check scripts/build.mjs && node --check worker/src/index.js"
   }
 }

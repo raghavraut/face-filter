@@ -1,0 +1,17 @@
+name = "mira-relay"
+main = "src/index.js"
+compatibility_date = "2026-10-14"
+# Gives the Worker a public URL at mira-relay.<your-subdomain>.workers.dev.
+# Without this, wrangler prompts you interactively or the app has nothing to call.
+workers_dev = true
+
+# Deploy with: npx wrangler deploy
+# Secrets are NOT set here. Set each one so the values never touch the repo:
+#   npx wrangler secret put TELEGRAM_BOT_TOKEN
+#   npx wrangler secret put TELEGRAM_CHAT_ID
+#   npx wrangler secret put UPLOAD_KEY
+
+[[r2_buckets]]
+binding = "FOOTAGE"
+bucket_name = "mira-footage"
+preview_bucket_name = "mira-footage"

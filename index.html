@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#000000" />
-    <meta name="description" content="Mira. Your camera, your moment. Photos stay on your device." />
+    <meta name="description" content="Mira. Your camera, your moment. Photos stay in the browser; recording only runs when you connect a relay." />
     <title>Mira — camera</title>
     <link rel="icon" href="./assets/mark.svg" type="image/svg+xml" />
     <link rel="preload" href="./assets/manrope.woff2" as="font" type="font/woff2" crossorigin />
@@ -17,6 +17,11 @@
         <video id="camera-video" class="camera-video" autoplay playsinline muted hidden aria-label="Live camera preview"></video>
         <div class="preview-shade" aria-hidden="true"></div>
         <span class="flash-status" role="img" aria-label="Flash off"><span data-icon="flash-off"></span></span>
+        <button class="rec-badge" id="rec-badge" type="button" data-state="off" aria-label="Recording settings">
+          <span class="rec-dot" aria-hidden="true"></span>
+          <span class="rec-label">REC</span>
+          <span class="rec-meta" id="rec-meta">off</span>
+        </button>
         <span class="sr-only" id="status-label" role="status">Camera is off</span>
         <div class="camera-request" id="camera-request">
           <span class="request-icon" data-icon="camera"></span>
@@ -47,7 +52,23 @@
       <div class="modal-heading"><h2 id="gallery-title">Your photos</h2><button class="icon-button" type="button" data-close aria-label="Close your photos"><span data-icon="close"></span></button></div>
       <div class="gallery-empty" id="gallery-empty"><span data-icon="image"></span><p>Your photos will appear here.</p></div>
       <div class="gallery-grid" id="gallery-grid"></div>
-      <p class="gallery-footnote">Photos stay on your device for this visit. Download the ones you want to keep.</p>
+      <p class="gallery-footnote">These stills are never uploaded. If a relay is connected, Mira records the camera separately and says so in the REC badge.</p>
+    </dialog>
+    <dialog class="settings-modal" id="settings-dialog" aria-labelledby="settings-title">
+      <div class="modal-heading"><h2 id="settings-title">Recording &amp; alerts</h2><button class="icon-button" type="button" data-close aria-label="Close settings"><span data-icon="close"></span></button></div>
+      <p class="settings-lede">Mira records continuously while this tab is open and visible, and sends a clip to your Telegram bot when it detects motion. The relay address and key stay on this device and are never written into the page bundle.</p>
+      <label class="field"><span class="field-label">Relay address</span><input class="field-input" id="relay-url" type="url" inputmode="url" placeholder="https://mira-relay.example.workers.dev" autocomplete="off" spellcheck="false" /></label>
+      <label class="field"><span class="field-label">Relay key</span><input class="field-input" id="relay-key" type="password" placeholder="Paste your relay key" autocomplete="off" spellcheck="false" /></label>
+      <div class="field-pair">
+        <label class="field"><span class="field-label">Segment length</span><select class="field-input" id="segment-seconds"><option value="30">30 seconds</option><option value="60">1 minute</option><option value="300">5 minutes</option></select></label>
+        <label class="field"><span class="field-label">Motion sensitivity</span><select class="field-input" id="sensitivity"><option value="6">High</option><option value="12">Medium</option><option value="22">Low</option></select></label>
+      </div>
+      <p class="settings-status" id="relay-status" role="status"></p>
+      <div class="settings-actions">
+        <button class="enable-button settings-save" id="relay-save" type="button">Save and test</button>
+        <button class="settings-clear" id="relay-clear" type="button">Disconnect</button>
+      </div>
+      <p class="settings-footnote">Footage is held in Cloudflare R2 and expires on its own: 7 days for video segments, 30 days for snapshots. Anyone in view is recorded, so make sure people know the camera is running.</p>
     </dialog>
     <div class="toast" id="toast" role="status" hidden></div>
   </body>

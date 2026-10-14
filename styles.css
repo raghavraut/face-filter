@@ -19,6 +19,16 @@ button:focus-visible,a:focus-visible{outline:2px solid #fff;outline-offset:5px}
 .flash-status{position:absolute;top:35px;left:50%;transform:translateX(-50%);width:44px;height:44px;display:flex;align-items:center;justify-content:center;z-index:1;color:#fff}
 .flash-status svg{width:31px;height:31px;stroke-width:2.15}
 .camera-request{position:absolute;left:24px;right:24px;top:45%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;text-align:center;max-width:330px;margin:0 auto;color:#f3f3f3}
+.rec-badge{position:absolute;top:20px;left:20px;z-index:2;display:flex;align-items:center;gap:7px;padding:6px 11px;border-radius:20px;background:#000000a8;backdrop-filter:blur(6px);font-size:10px;font-weight:700;letter-spacing:.4px;line-height:1.5;color:#fff;user-select:none}
+.rec-badge:hover{background:#000000d0}
+.rec-dot{width:8px;height:8px;border-radius:50%;background:#8a8a8a;flex-shrink:0}
+.rec-badge[data-state=live] .rec-dot{background:#ff3b30;animation:rec-pulse 1.6s ease-in-out infinite}
+.rec-badge[data-state=error] .rec-dot{background:#ffa940}
+.rec-label{opacity:.95}
+.rec-meta{font-weight:500;opacity:.7;font-variant-numeric:tabular-nums;letter-spacing:0}
+.rec-badge[data-state=live] .rec-label{color:#ff6b63}
+.rec-badge[data-state=error] .rec-meta{color:#ffa940;opacity:1}
+@keyframes rec-pulse{0%,100%{opacity:1}50%{opacity:.35}}
 .request-icon{color:#858585;margin-bottom:16px}.request-icon svg{width:36px;height:36px;stroke-width:1.3}
 .camera-request h1{font-size:17px;font-weight:600;line-height:1.4;margin:0 0 8px;letter-spacing:-.2px}
 .camera-request p{font-size:12px;color:#a8a8a8;line-height:1.7;max-width:270px;margin:0}
@@ -57,6 +67,21 @@ button:focus-visible,a:focus-visible{outline:2px solid #fff;outline-offset:5px}
 .gallery-empty{padding:40px 0;text-align:center;color:#ababab}.gallery-empty svg{width:35px;height:35px;stroke-width:1.3}.gallery-empty p{font-size:13px;line-height:1.7;margin:16px 0}
 .gallery-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.photo-card{margin:0;min-width:0}.photo-card img{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;border-radius:10px;background:#252525}.photo-card a{display:flex;align-items:center;justify-content:space-between;text-decoration:none;font-size:11px;color:#ddd;margin-top:9px;padding:5px 0}.photo-card a svg{width:15px;height:15px;stroke-width:1.7}
 .gallery-footnote{font-size:11px;line-height:1.7;color:#a0a0a0;margin:22px 0 0;text-align:center}
+.settings-modal{width:min(460px,calc(100% - 28px));max-height:85svh;overflow:auto;border:1px solid #333;border-radius:22px;background:#161616;color:#f5f5f5;padding:24px}
+.settings-modal::backdrop{background:#000b}
+.settings-lede{font-size:12px;line-height:1.75;color:#b8b8b8;margin:0 0 20px}
+.field{display:block;margin-bottom:14px}
+.field-label{display:block;font-size:11px;letter-spacing:.3px;color:#a8a8a8;margin-bottom:6px}
+.field-input{width:100%;padding:11px 13px;border-radius:11px;border:1px solid #343434;background:#0f0f0f;color:#fff;font:inherit;font-size:13px;min-height:42px}
+.field-input:focus-visible{outline:2px solid #fff;outline-offset:1px;border-color:transparent}
+.field-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field-pair select{appearance:none;background-image:none}
+.settings-status{font-size:12px;line-height:1.6;color:#a8a8a8;margin:4px 0 16px;min-height:1.6em}
+.settings-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.settings-save{margin-top:0}
+.settings-clear{font-size:12px;color:#a8a8a8;text-decoration:underline;text-underline-offset:3px;padding:9px 2px}
+.settings-clear:hover{color:#fff}
+.settings-footnote{font-size:11px;line-height:1.7;color:#8c8c8c;margin:18px 0 0}
 .toast{position:fixed;top:calc(20px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);padding:11px 17px;border-radius:24px;background:#282828;color:#fff;font-size:12px;line-height:1.6;z-index:4;text-align:center;box-shadow:0 5px 25px #0005}
 @keyframes shutter-flash{from{opacity:.5}to{opacity:0}}
 @media(min-width:700px){.camera-app{max-width:520px}.viewfinder{inset:24px 0 126px;border-radius:28px}.bottom-controls{left:25px;right:25px;bottom:18px}.look-tray{width:360px}}

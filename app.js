@@ -39,6 +39,7 @@ function syncCameraControls() {
   enableButton.disabled = cameraPending;
 }
 function showCameraOff(title, description) {
+  stopRecording();
   video.hidden = true;
   byId('camera-request').hidden = false;
   byId('status-label').textContent = 'Camera is off';
@@ -80,6 +81,7 @@ async function openCamera() {
     video.hidden = false;
     byId('camera-request').hidden = true;
     byId('status-label').textContent = 'Live camera';
+    startRecording(nextStream);
     nextStream.getVideoTracks().forEach(track => track.addEventListener('ended', () => {
       if (stream !== nextStream) return;
       stream = null;
@@ -129,23 +131,27 @@ lookChoices.forEach((choice, index) => {
     lookChoices[next].focus();
   });
 });
+function renderFrame() {
+  const bounds = byId('viewfinder').getBoundingClientRect();
+  const outputRatio = bounds.width / bounds.height;
+  const inputRatio = video.videoWidth / video.videoHeight;
+  const sourceWidth = inputRatio > outputRatio ? video.videoHeight * outputRatio : video.videoWidth;
+  const sourceHeight = inputRatio > outputRatio ? video.videoHeight : video.videoWidth / outputRatio;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(sourceWidth);
+  canvas.height = Math.round(sourceHeight);
+  const context = canvas.getContext('2d');
+  if (facingMode === 'user') { context.translate(canvas.width, 0); context.scale(-1, 1); }
+  context.drawImage(video, (video.videoWidth - sourceWidth) / 2, (video.videoHeight - sourceHeight) / 2, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
 async function takePhoto() {
   if (shutter.disabled || capturing || !stream?.active || !video.videoWidth) return;
   capturing = true;
   const version = requestVersion;
   syncCameraControls();
   try {
-    const bounds = byId('viewfinder').getBoundingClientRect();
-    const outputRatio = bounds.width / bounds.height;
-    const inputRatio = video.videoWidth / video.videoHeight;
-    const sourceWidth = inputRatio > outputRatio ? video.videoHeight * outputRatio : video.videoWidth;
-    const sourceHeight = inputRatio > outputRatio ? video.videoHeight : video.videoWidth / outputRatio;
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(sourceWidth);
-    canvas.height = Math.round(sourceHeight);
-    const context = canvas.getContext('2d');
-    if (facingMode === 'user') { context.translate(canvas.width, 0); context.scale(-1, 1); }
-    context.drawImage(video, (video.videoWidth - sourceWidth) / 2, (video.videoHeight - sourceHeight) / 2, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
+    const canvas = renderFrame();
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', .93));
     if (!blob || version !== requestVersion) return;
     const photo = {url:URL.createObjectURL(blob),time:new Date(),width:canvas.width,height:canvas.height};
@@ -178,6 +184,181 @@ function renderGallery() {
   });
   byId('gallery-grid').replaceChildren(...cards);
 }
+const CONFIG_KEY = 'mira.surveillance';
+const config = {url:'', key:'', segmentSeconds:60, sensitivity:12};
+const relayQueue = [];
+const relayState = {uploading:false, wantClipFrom:0, lastAlertAt:0};
+const recording = {instance:null, active:false, startedAt:0, segments:0, rotateTimer:0, clockTimer:0};
+const motion = {canvas:document.createElement('canvas'), context:null, previous:null, hits:0, timer:0};
+motion.canvas.width = 64;
+motion.canvas.height = 48;
+motion.context = motion.canvas.getContext('2d', {willReadFrequently:true});
+const relayConfigured = () => Boolean(config.url && config.key);
+function supportedMimeType() {
+  if (!window.MediaRecorder) return '';
+  return ['video/webm;codecs=vp8', 'video/webm', 'video/mp4'].find(type => MediaRecorder.isTypeSupported(type)) || '';
+}
+function setBadge(state, meta) { byId('rec-badge').dataset.state = state; byId('rec-meta').textContent = meta; }
+function badgeClock() {
+  const elapsed = Math.max(0, Math.floor((Date.now() - recording.startedAt) / 1000));
+  const queued = relayQueue.length ? ` · ${relayQueue.length} queued` : '';
+  setBadge('live', `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')} · ${recording.segments} seg${queued}`);
+}
+async function relayFetch(path, options = {}) {
+  const response = await fetch(`${config.url.replace(/\/+$/, '')}${path}`, {...options, headers: {...(options.headers || {}), 'x-mira-key': config.key}});
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `relay replied ${response.status}`);
+  return payload;
+}
+function enqueueUpload(blob, kind) {
+  relayQueue.push({blob, kind});
+  if (relayState.uploading) return;
+  pumpQueue();
+}
+async function pumpQueue() {
+  relayState.uploading = true;
+  while (relayQueue.length) {
+    const item = relayQueue[0];
+    let stored = null;
+    for (let attempt = 1; attempt <= 3 && !stored; attempt++) {
+      try {
+        stored = await relayFetch(`/upload?kind=${item.kind}`, {method:'POST', headers:{'content-type': item.kind === 'snapshot' ? 'image/jpeg' : 'video/webm'}, body:item.blob});
+      } catch (error) {
+        if (attempt === 3) console.warn('Mira relay upload failed, dropping this item.', error);
+        else await new Promise(resolve => setTimeout(resolve, 1500 * attempt));
+      }
+    }
+    relayQueue.shift();
+    if (!stored) { setBadge('error', 'upload failed'); continue; }
+    const clip = item.kind === 'segment' && relayState.wantClipFrom && Date.now() >= relayState.wantClipFrom;
+    if (!clip && item.kind !== 'snapshot') continue;
+    if (clip) relayState.wantClipFrom = 0;
+    try {
+      await relayFetch('/notify', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({kind: clip ? 'clip' : 'snapshot', key: stored.key, note:'Motion detected', at:new Date().toISOString()})});
+    } catch (error) { console.warn('Mira relay notify failed.', error); }
+  }
+  relayState.uploading = false;
+  if (recording.active) badgeClock();
+}
+function beginSegment(activeStream) {
+  const mimeType = supportedMimeType();
+  const chunks = [];
+  const instance = new MediaRecorder(activeStream, {mimeType, videoBitsPerSecond:1200000});
+  instance.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
+  instance.onstop = () => {
+    const stillCurrent = recording.instance === instance;
+    if (stillCurrent) { recording.instance = null; clearTimeout(recording.rotateTimer); }
+    const blob = new Blob(chunks, {type:mimeType.split(';')[0]});
+    if (blob.size) { recording.segments += 1; enqueueUpload(blob, 'segment'); }
+    if (stillCurrent && recording.active && stream?.active) beginSegment(stream);
+  };
+  recording.instance = instance;
+  instance.start(1000);
+  clearTimeout(recording.rotateTimer);
+  recording.rotateTimer = setTimeout(() => {
+    if (instance.state !== 'inactive') { instance.requestData(); instance.stop(); }
+  }, config.segmentSeconds * 1000);
+}
+function stopRecording() {
+  recording.active = false;
+  clearInterval(recording.clockTimer);
+  clearTimeout(recording.rotateTimer);
+  stopMotionWatch();
+  const instance = recording.instance;
+  recording.instance = null;
+  if (instance && instance.state !== 'inactive') instance.stop();
+  setBadge('off', relayConfigured() ? 'paused' : 'not connected');
+}
+function startRecording(activeStream) {
+  stopRecording();
+  if (!relayConfigured() || !activeStream?.active) return;
+  if (!supportedMimeType()) { setBadge('error', 'recording unsupported'); return; }
+  recording.active = true;
+  recording.startedAt = Date.now();
+  beginSegment(activeStream);
+  watchMotion();
+  recording.clockTimer = setInterval(badgeClock, 1000);
+  badgeClock();
+}
+function measureMotion() {
+  motion.context.drawImage(video, 0, 0, motion.canvas.width, motion.canvas.height);
+  const frame = motion.context.getImageData(0, 0, motion.canvas.width, motion.canvas.height).data;
+  const previous = motion.previous;
+  motion.previous = frame;
+  if (!previous) return 0;
+  let total = 0;
+  for (let index = 0; index < frame.length; index += 4) total += Math.abs(frame[index] - previous[index]);
+  return total / (frame.length / 4);
+}
+function watchMotion() {
+  stopMotionWatch();
+  if (!relayConfigured() || !stream?.active) return;
+  motion.timer = setInterval(() => {
+    if (!stream?.active || video.readyState < 2 || !video.videoWidth) return;
+    motion.hits = measureMotion() >= config.sensitivity ? motion.hits + 1 : 0;
+    if (motion.hits < 2) return;
+    motion.hits = 0;
+    if (Date.now() - relayState.lastAlertAt < 60000) return;
+    relayState.lastAlertAt = Date.now();
+    captureAlert();
+  }, 1000);
+}
+function stopMotionWatch() { clearInterval(motion.timer); motion.timer = 0; motion.previous = null; motion.hits = 0; }
+async function captureAlert() {
+  if (!video.videoWidth) return;
+  relayState.wantClipFrom = Date.now();
+  const blob = await new Promise(resolve => renderFrame().toBlob(resolve, 'image/jpeg', .8));
+  if (blob) enqueueUpload(blob, 'snapshot');
+}
+function loadConfig() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
+    if (typeof saved.url === 'string') config.url = saved.url;
+    if (typeof saved.key === 'string') config.key = saved.key;
+    if ([30, 60, 300].includes(saved.segmentSeconds)) config.segmentSeconds = saved.segmentSeconds;
+    if ([6, 12, 22].includes(saved.sensitivity)) config.sensitivity = saved.sensitivity;
+  } catch { localStorage.removeItem(CONFIG_KEY); }
+}
+function storeConfig() {
+  try { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); } catch { /* storage unavailable */ }
+}
+function openSettings() {
+  byId('relay-url').value = config.url;
+  byId('relay-key').value = config.key;
+  byId('segment-seconds').value = String(config.segmentSeconds);
+  byId('sensitivity').value = String(config.sensitivity);
+  byId('relay-status').textContent = relayConfigured() ? 'Connected.' : 'Not connected yet.';
+  byId('settings-dialog').showModal();
+}
+async function saveSettings() {
+  config.url = byId('relay-url').value.trim();
+  config.key = byId('relay-key').value.trim();
+  config.segmentSeconds = Number(byId('segment-seconds').value);
+  config.sensitivity = Number(byId('sensitivity').value);
+  const status = byId('relay-status');
+  if (!relayConfigured()) { status.textContent = 'Enter both the relay address and the relay key.'; return; }
+  status.textContent = 'Testing relay…';
+  try {
+    await relayFetch('/health');
+    storeConfig();
+    if (stream?.active) startRecording(stream);
+    byId('settings-dialog').close();
+    toast('Relay connected. Recording with the camera.');
+  } catch (error) { status.textContent = `Could not connect: ${error.message}`; }
+}
+function clearSettings() {
+  config.url = '';
+  config.key = '';
+  storeConfig();
+  relayQueue.length = 0;
+  stopRecording();
+  byId('relay-status').textContent = 'Not connected. Nothing is being recorded or sent.';
+}
+byId('rec-badge').addEventListener('click', openSettings);
+byId('relay-save').addEventListener('click', saveSettings);
+byId('relay-clear').addEventListener('click', clearSettings);
+loadConfig();
+if (!relayConfigured()) setBadge('off', 'not connected');
 enableButton.addEventListener('click', openCamera);
 shutter.addEventListener('click', takePhoto);
 flipButton.addEventListener('click', async () => {
@@ -204,7 +385,8 @@ document.addEventListener('keydown', event => {
   event.preventDefault(); takePhoto();
 });
 window.addEventListener('pagehide', () => {
-  requestVersion++; stream?.getTracks().forEach(track => track.stop());
+  requestVersion++; stopRecording();
+  stream?.getTracks().forEach(track => track.stop());
   stream = null; video.srcObject = null; cameraPending = false; syncCameraControls();
 });
 window.addEventListener('pageshow', event => { if (event.persisted) openCamera(); });
