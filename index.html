@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f4f1f8" />
+    <meta name="description" content="Mira. A little moment, all you. An everyday camera that keeps your photos on your device." />
+    <title>Mira — your everyday camera</title>
+    <link rel="icon" href="./assets/mark.svg" type="image/svg+xml" />
+    <link rel="preload" href="./assets/manrope.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="./assets/space-grotesk.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="./" aria-label="Mira home">
+          <img src="./assets/mark.svg" width="34" height="34" alt="" />
+          <span>mira<span class="brand-period">.</span></span>
+          <span class="brand-caption">your everyday camera</span>
+        </a>
+        <p class="topbar-note">A little moment. <span>All you.</span></p>
+        <div class="header-actions">
+          <button class="privacy-button" id="privacy-button" type="button" aria-label="About your privacy">
+            <span data-icon="shield"></span>
+            <span>Just you & your camera</span>
+          </button>
+          <button class="icon-button settings-button" id="settings-button" type="button" aria-label="Camera settings">
+            <span data-icon="settings"></span>
+          </button>
+        </div>
+      </header>
+
+      <section class="camera-workspace" aria-label="Camera studio">
+        <div class="viewfinder" id="viewfinder">
+          <img class="sample-image" src="./assets/portrait.jpg" alt="Sample portrait shown while the camera is off" fetchpriority="high" />
+          <video id="camera-video" class="camera-video" autoplay playsinline muted hidden aria-label="Live camera preview"></video>
+          <div class="viewfinder-shade" aria-hidden="true"></div>
+
+          <div class="viewfinder-toolbar">
+            <button class="camera-pill mirror-button" id="mirror-button" type="button" aria-label="Mirror preview" aria-pressed="true">
+              <span data-icon="mirror"></span><span id="mirror-label">Mirror on</span>
+            </button>
+            <span class="camera-status" id="camera-status" role="status"><span class="status-dot"></span><span id="status-label">Sample preview</span></span>
+            <div class="viewfinder-actions">
+              <button class="camera-pill" id="timer-button" type="button" aria-label="Set capture timer. Currently off">
+                <span data-icon="timer"></span><span id="timer-label">Timer off</span>
+              </button>
+              <button class="camera-pill square-pill" id="grid-button" type="button" aria-label="Show composition grid" aria-pressed="false">
+                <span data-icon="grid"></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="composition-grid" id="composition-grid" hidden aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <div class="portrait-guide" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <div class="countdown" id="countdown" hidden aria-live="assertive"></div>
+          <div class="capture-flash" id="capture-flash" aria-hidden="true"></div>
+
+          <div class="viewfinder-bottom">
+            <div class="camera-request" id="camera-request">
+              <span class="request-icon" data-icon="camera"></span>
+              <div class="request-copy"><p id="request-title">Step into the frame.</p><span id="request-description">Enable your camera. Make this moment yours.</span></div>
+              <button class="enable-button" id="enable-camera" type="button">Enable camera<span data-icon="arrow"></span></button>
+            </div>
+            <div class="live-caption" id="live-caption" hidden><span class="little-star">✳</span> Here’s looking at you.</div>
+            <span class="current-look"><span data-icon="sparkles"></span><span id="current-look-label">Daylight</span></span>
+          </div>
+        </div>
+
+        <div class="control-dock">
+          <div class="dock-caption"><span class="dock-line"></span> A mood for every moment <span class="dock-line"></span></div>
+          <div class="look-selector" role="radiogroup" aria-label="Choose your look">
+            <button class="look-choice is-selected" type="button" role="radio" aria-checked="true" tabindex="0" data-look="Daylight">
+              <span class="look-swatch daylight-swatch"><span data-icon="sun"></span><span class="selected-tick" data-icon="check"></span></span>
+              <span class="look-label">Daylight</span>
+            </button>
+            <button class="look-choice" type="button" role="radio" aria-checked="false" tabindex="-1" data-look="Rosé">
+              <span class="look-swatch rose-swatch"><span class="flower-symbol" aria-hidden="true">✿</span><span class="selected-tick" data-icon="check"></span></span>
+              <span class="look-label">Rosé</span>
+            </button>
+            <button class="look-choice" type="button" role="radio" aria-checked="false" tabindex="-1" data-look="Midnight">
+              <span class="look-swatch midnight-swatch"><span data-icon="moon"></span><span class="swatch-star" aria-hidden="true">✧</span><span class="selected-tick" data-icon="check"></span></span>
+              <span class="look-label">Midnight</span>
+            </button>
+          </div>
+          <div class="capture-controls">
+            <button class="secondary-control gallery-control" id="gallery-button" type="button" aria-label="Open your photos">
+              <span class="gallery-thumbnail" id="gallery-thumbnail"><span data-icon="image"></span></span>
+              <span class="control-label">Your photos<span class="photo-count" id="photo-count" hidden></span></span>
+            </button>
+            <div class="shutter-wrap"><button class="shutter-button" id="shutter-button" type="button" aria-label="Take photo" disabled><span class="shutter-center"></span></button><span class="shutter-label">Make a moment</span></div>
+            <button class="secondary-control flip-control" id="flip-button" type="button" aria-label="Switch between front and rear camera" disabled>
+              <span class="flip-icon"><span data-icon="flip"></span></span><span class="control-label">Flip camera</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <footer class="app-footer"><span>Less scrolling. More living.</span><span class="footer-privacy"><span data-icon="lock"></span> Your moments stay on your device.</span><span class="keyboard-tip"><kbd>space</kbd> to capture</span></footer>
+    </main>
+
+    <dialog class="modal" id="settings-dialog" aria-labelledby="settings-title">
+      <div class="modal-heading"><div><span class="modal-eyebrow">MAKE YOURSELF AT HOME</span><h2 id="settings-title">Camera settings</h2></div><button class="icon-button" type="button" data-close aria-label="Close settings"><span data-icon="close"></span></button></div>
+      <label class="setting-row"><span><strong>Mirror preview</strong><small>See yourself as you would in a mirror.</small></span><input class="toggle" type="checkbox" id="mirror-setting" checked /></label>
+      <label class="setting-row"><span><strong>Composition grid</strong><small>A little help finding your frame.</small></span><input class="toggle" type="checkbox" id="grid-setting" /></label>
+      <label class="setting-row"><span><strong>Capture timer</strong><small>Give yourself a moment to get ready.</small></span><select id="timer-setting" aria-label="Capture timer"><option value="0">Off</option><option value="3">3 seconds</option><option value="10">10 seconds</option></select></label>
+    </dialog>
+
+    <dialog class="modal privacy-modal" id="privacy-dialog" aria-labelledby="privacy-title">
+      <div class="modal-heading"><span class="privacy-illustration" data-icon="shield"></span><button class="icon-button" type="button" data-close aria-label="Close privacy information"><span data-icon="close"></span></button></div>
+      <span class="modal-eyebrow">A LITTLE SPACE THAT’S YOURS</span><h2 id="privacy-title">Just you & your camera.</h2>
+      <p>Your camera preview and photos stay in this browser. Nothing is uploaded or sent to a server.</p><p>Photos are kept for this visit. Download the ones you love before closing the page.</p>
+      <button class="primary-button" type="button" data-close>Sounds good<span data-icon="arrow"></span></button>
+    </dialog>
+
+    <dialog class="modal gallery-modal" id="gallery-dialog" aria-labelledby="gallery-title">
+      <div class="modal-heading"><div><span class="modal-eyebrow">THE LITTLE THINGS</span><h2 id="gallery-title">Your moments</h2></div><button class="icon-button" type="button" data-close aria-label="Close your photos"><span data-icon="close"></span></button></div>
+      <div class="gallery-empty" id="gallery-empty"><span data-icon="image"></span><h3>A little collection of you.</h3><p>Take your first photo and you’ll find it here.</p></div><div class="gallery-grid" id="gallery-grid"></div>
+      <p class="gallery-footnote">Your last 12 photos, kept for this visit. Download your favorites.</p>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" hidden></div>
+  </body>
+</html>
