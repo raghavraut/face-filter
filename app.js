@@ -185,10 +185,10 @@ function renderGallery() {
   byId('gallery-grid').replaceChildren(...cards);
 }
 const CONFIG_KEY = 'mira.surveillance';
-const config = {url:'', key:'', segmentSeconds:60, sensitivity:12};
+const config = {url:'', key:'', segmentSeconds:5, sensitivity:12};
 const relayQueue = [];
 const relayState = {uploading:false, wantClipFrom:0, lastAlertAt:0};
-const recording = {instance:null, active:false, startedAt:0, segments:0, rotateTimer:0, clockTimer:0};
+const recording = {instance:null, active:false, startedAt:0, segments:0, rotateTimer:0, clockTimer:0, snapshotTimer:0};
 const motion = {canvas:document.createElement('canvas'), context:null, previous:null, hits:0, timer:0};
 motion.canvas.width = 64;
 motion.canvas.height = 48;
@@ -211,6 +211,7 @@ async function relayFetch(path, options = {}) {
   return payload;
 }
 function enqueueUpload(blob, kind) {
+  if (!relayConfigured()) return;
   relayQueue.push({blob, kind});
   if (relayState.uploading) return;
   pumpQueue();
@@ -263,6 +264,8 @@ function stopRecording() {
   recording.active = false;
   clearInterval(recording.clockTimer);
   clearTimeout(recording.rotateTimer);
+  clearInterval(recording.snapshotTimer);
+  recording.snapshotTimer = 0;
   stopMotionWatch();
   const instance = recording.instance;
   recording.instance = null;
@@ -279,6 +282,8 @@ function startRecording(activeStream) {
   watchMotion();
   recording.clockTimer = setInterval(badgeClock, 1000);
   badgeClock();
+  recording.snapshotTimer = setInterval(() => captureSnapshot(), 1000);
+  captureSnapshot();
 }
 function measureMotion() {
   motion.context.drawImage(video, 0, 0, motion.canvas.width, motion.canvas.height);
@@ -304,16 +309,22 @@ function watchMotion() {
   }, 1000);
 }
 function stopMotionWatch() { clearInterval(motion.timer); motion.timer = 0; motion.previous = null; motion.hits = 0; }
+async function captureSnapshot() {
+  if (!video.videoWidth) return;
+  const blob = await new Promise(resolve => renderFrame().toBlob(resolve, 'image/jpeg', .8));
+  if (blob) enqueueUpload(blob, 'snapshot');
+}
 async function captureAlert() {
   if (!video.videoWidth) return;
   relayState.wantClipFrom = Date.now();
-  const blob = await new Promise(resolve => renderFrame().toBlob(resolve, 'image/jpeg', .8));
-  if (blob) enqueueUpload(blob, 'snapshot');
+  captureSnapshot();
 }
 function loadConfig() {
   try {
     const saved = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
-    if ([30, 60, 300].includes(saved.segmentSeconds)) config.segmentSeconds = saved.segmentSeconds;
+    if (typeof saved.url === 'string') config.url = saved.url;
+    if (typeof saved.key === 'string') config.key = saved.key;
+    if ([5, 30, 60, 300].includes(saved.segmentSeconds)) config.segmentSeconds = saved.segmentSeconds;
     if ([6, 12, 22].includes(saved.sensitivity)) config.sensitivity = saved.sensitivity;
   } catch { localStorage.removeItem(CONFIG_KEY); }
 }
