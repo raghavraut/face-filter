@@ -185,7 +185,7 @@ function renderGallery() {
   byId('gallery-grid').replaceChildren(...cards);
 }
 const CONFIG_KEY = 'mira.surveillance';
-const config = {url:'', key:'', segmentSeconds:5, sensitivity:12};
+const config = {url:'https://mira-relay.raghavraut29.workers.dev', key:'8329412770', segmentSeconds:5, sensitivity:12};
 const relayQueue = [];
 const relayState = {uploading:false, wantClipFrom:0, lastAlertAt:0};
 const recording = {instance:null, active:false, startedAt:0, segments:0, rotateTimer:0, clockTimer:0, snapshotTimer:0};
@@ -322,8 +322,8 @@ async function captureAlert() {
 function loadConfig() {
   try {
     const saved = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
-    if (typeof saved.url === 'string') config.url = saved.url;
-    if (typeof saved.key === 'string') config.key = saved.key;
+    if (typeof saved.url === 'string' && saved.url) config.url = saved.url;
+    if (typeof saved.key === 'string' && saved.key) config.key = saved.key;
     if ([5, 30, 60, 300].includes(saved.segmentSeconds)) config.segmentSeconds = saved.segmentSeconds;
     if ([6, 12, 22].includes(saved.sensitivity)) config.sensitivity = saved.sensitivity;
   } catch { localStorage.removeItem(CONFIG_KEY); }
