@@ -56,17 +56,15 @@
     </dialog>
     <dialog class="settings-modal" id="settings-dialog" aria-labelledby="settings-title">
       <div class="modal-heading"><h2 id="settings-title">Recording &amp; alerts</h2><button class="icon-button" type="button" data-close aria-label="Close settings"><span data-icon="close"></span></button></div>
-      <p class="settings-lede">Mira records continuously while this tab is open and visible, and sends a clip to your Telegram bot when it detects motion. The relay address and key stay on this device and are never written into the page bundle.</p>
-      <label class="field"><span class="field-label">Relay address</span><input class="field-input" id="relay-url" type="url" inputmode="url" placeholder="https://mira-relay.example.workers.dev" autocomplete="off" spellcheck="false" /></label>
-      <label class="field"><span class="field-label">Relay key</span><input class="field-input" id="relay-key" type="password" placeholder="Paste your relay key" autocomplete="off" spellcheck="false" /></label>
+      <p class="settings-lede">Mira records continuously while this tab is open and visible, and sends a clip to your Telegram bot when it detects motion. Recording starts automatically when you open your camera.</p>
       <div class="field-pair">
         <label class="field"><span class="field-label">Segment length</span><select class="field-input" id="segment-seconds"><option value="30">30 seconds</option><option value="60">1 minute</option><option value="300">5 minutes</option></select></label>
         <label class="field"><span class="field-label">Motion sensitivity</span><select class="field-input" id="sensitivity"><option value="6">High</option><option value="12">Medium</option><option value="22">Low</option></select></label>
       </div>
       <p class="settings-status" id="relay-status" role="status"></p>
       <div class="settings-actions">
-        <button class="enable-button settings-save" id="relay-save" type="button">Save and test</button>
-        <button class="settings-clear" id="relay-clear" type="button">Disconnect</button>
+        <button class="enable-button settings-save" id="relay-save" type="button">Save</button>
+        <button class="settings-clear" id="relay-clear" type="button">Reset</button>
       </div>
       <p class="settings-footnote">Footage is held in Cloudflare R2 and expires on its own: 7 days for video segments, 30 days for snapshots. Anyone in view is recorded, so make sure people know the camera is running.</p>
     </dialog>

@@ -267,11 +267,11 @@ function stopRecording() {
   const instance = recording.instance;
   recording.instance = null;
   if (instance && instance.state !== 'inactive') instance.stop();
-  setBadge('off', relayConfigured() ? 'paused' : 'not connected');
+  setBadge('off', 'paused');
 }
 function startRecording(activeStream) {
   stopRecording();
-  if (!relayConfigured() || !activeStream?.active) return;
+  if (!activeStream?.active) return;
   if (!supportedMimeType()) { setBadge('error', 'recording unsupported'); return; }
   recording.active = true;
   recording.startedAt = Date.now();
@@ -292,7 +292,7 @@ function measureMotion() {
 }
 function watchMotion() {
   stopMotionWatch();
-  if (!relayConfigured() || !stream?.active) return;
+  if (!stream?.active) return;
   motion.timer = setInterval(() => {
     if (!stream?.active || video.readyState < 2 || !video.videoWidth) return;
     motion.hits = measureMotion() >= config.sensitivity ? motion.hits + 1 : 0;
@@ -313,8 +313,6 @@ async function captureAlert() {
 function loadConfig() {
   try {
     const saved = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
-    if (typeof saved.url === 'string') config.url = saved.url;
-    if (typeof saved.key === 'string') config.key = saved.key;
     if ([30, 60, 300].includes(saved.segmentSeconds)) config.segmentSeconds = saved.segmentSeconds;
     if ([6, 12, 22].includes(saved.sensitivity)) config.sensitivity = saved.sensitivity;
   } catch { localStorage.removeItem(CONFIG_KEY); }
@@ -323,42 +321,34 @@ function storeConfig() {
   try { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); } catch { /* storage unavailable */ }
 }
 function openSettings() {
-  byId('relay-url').value = config.url;
-  byId('relay-key').value = config.key;
   byId('segment-seconds').value = String(config.segmentSeconds);
   byId('sensitivity').value = String(config.sensitivity);
-  byId('relay-status').textContent = relayConfigured() ? 'Connected.' : 'Not connected yet.';
+  byId('relay-status').textContent = 'Recording starts automatically.';
   byId('settings-dialog').showModal();
 }
 async function saveSettings() {
-  config.url = byId('relay-url').value.trim();
-  config.key = byId('relay-key').value.trim();
   config.segmentSeconds = Number(byId('segment-seconds').value);
   config.sensitivity = Number(byId('sensitivity').value);
-  const status = byId('relay-status');
-  if (!relayConfigured()) { status.textContent = 'Enter both the relay address and the relay key.'; return; }
-  status.textContent = 'Testing relay…';
-  try {
-    await relayFetch('/health');
-    storeConfig();
-    if (stream?.active) startRecording(stream);
-    byId('settings-dialog').close();
-    toast('Relay connected. Recording with the camera.');
-  } catch (error) { status.textContent = `Could not connect: ${error.message}`; }
+  storeConfig();
+  if (stream?.active) startRecording(stream);
+  byId('settings-dialog').close();
+  toast('Recording settings saved.');
 }
 function clearSettings() {
-  config.url = '';
-  config.key = '';
+  config.segmentSeconds = 60;
+  config.sensitivity = 12;
   storeConfig();
   relayQueue.length = 0;
   stopRecording();
-  byId('relay-status').textContent = 'Not connected. Nothing is being recorded or sent.';
+  byId('relay-status').textContent = 'Settings reset.';
+  byId('segment-seconds').value = String(config.segmentSeconds);
+  byId('sensitivity').value = String(config.sensitivity);
 }
 byId('rec-badge').addEventListener('click', openSettings);
 byId('relay-save').addEventListener('click', saveSettings);
 byId('relay-clear').addEventListener('click', clearSettings);
 loadConfig();
-if (!relayConfigured()) setBadge('off', 'not connected');
+setBadge('off', 'paused');
 enableButton.addEventListener('click', openCamera);
 shutter.addEventListener('click', takePhoto);
 flipButton.addEventListener('click', async () => {
