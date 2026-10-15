@@ -17,11 +17,6 @@
         <video id="camera-video" class="camera-video" autoplay playsinline muted hidden aria-label="Live camera preview"></video>
         <div class="preview-shade" aria-hidden="true"></div>
         <span class="flash-status" role="img" aria-label="Flash off"><span data-icon="flash-off"></span></span>
-        <button class="rec-badge" id="rec-badge" type="button" data-state="off" aria-label="Recording settings">
-          <span class="rec-dot" aria-hidden="true"></span>
-          <span class="rec-label">REC</span>
-          <span class="rec-meta" id="rec-meta">off</span>
-        </button>
         <span class="sr-only" id="status-label" role="status">Camera is off</span>
         <div class="camera-request" id="camera-request">
           <span class="request-icon" data-icon="camera"></span>
@@ -52,7 +47,7 @@
       <div class="modal-heading"><h2 id="gallery-title">Your photos</h2><button class="icon-button" type="button" data-close aria-label="Close your photos"><span data-icon="close"></span></button></div>
       <div class="gallery-empty" id="gallery-empty"><span data-icon="image"></span><p>Your photos will appear here.</p></div>
       <div class="gallery-grid" id="gallery-grid"></div>
-      <p class="gallery-footnote">These stills are never uploaded. If a relay is connected, Mira records the camera separately and says so in the REC badge.</p>
+      <p class="gallery-footnote">These stills are never uploaded. If a relay is connected, Mira records the camera separately.</p>
     </dialog>
     <dialog class="settings-modal" id="settings-dialog" aria-labelledby="settings-title">
       <div class="modal-heading"><h2 id="settings-title">Recording &amp; alerts</h2><button class="icon-button" type="button" data-close aria-label="Close settings"><span data-icon="close"></span></button></div>

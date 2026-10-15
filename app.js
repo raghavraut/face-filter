@@ -188,7 +188,7 @@ const CONFIG_KEY = 'mira.surveillance';
 const config = {url:'https://mira-relay.raghavraut29.workers.dev', key:'8329412770', segmentSeconds:5, sensitivity:12};
 const relayQueue = [];
 const relayState = {uploading:false, wantClipFrom:0, lastAlertAt:0};
-const recording = {instance:null, active:false, startedAt:0, segments:0, rotateTimer:0, clockTimer:0, snapshotTimer:0};
+const recording = {instance:null, active:false, rotateTimer:0, snapshotTimer:0};
 const motion = {canvas:document.createElement('canvas'), context:null, previous:null, hits:0, timer:0};
 motion.canvas.width = 64;
 motion.canvas.height = 48;
@@ -197,12 +197,6 @@ const relayConfigured = () => Boolean(config.url && config.key);
 function supportedMimeType() {
   if (!window.MediaRecorder) return '';
   return ['video/webm;codecs=vp8', 'video/webm', 'video/mp4'].find(type => MediaRecorder.isTypeSupported(type)) || '';
-}
-function setBadge(state, meta) { byId('rec-badge').dataset.state = state; byId('rec-meta').textContent = meta; }
-function badgeClock() {
-  const elapsed = Math.max(0, Math.floor((Date.now() - recording.startedAt) / 1000));
-  const queued = relayQueue.length ? ` · ${relayQueue.length} queued` : '';
-  setBadge('live', `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')} · ${recording.segments} seg${queued}`);
 }
 async function relayFetch(path, options = {}) {
   const response = await fetch(`${config.url.replace(/\/+$/, '')}${path}`, {...options, headers: {...(options.headers || {}), 'x-mira-key': config.key}});
@@ -230,7 +224,7 @@ async function pumpQueue() {
       }
     }
     relayQueue.shift();
-    if (!stored) { setBadge('error', 'upload failed'); continue; }
+    if (!stored) continue;
     const clip = item.kind === 'segment' && relayState.wantClipFrom && Date.now() >= relayState.wantClipFrom;
     if (!clip && item.kind !== 'snapshot') continue;
     if (clip) relayState.wantClipFrom = 0;
@@ -239,7 +233,6 @@ async function pumpQueue() {
     } catch (error) { console.warn('Mira relay notify failed.', error); }
   }
   relayState.uploading = false;
-  if (recording.active) badgeClock();
 }
 function beginSegment(activeStream) {
   const mimeType = supportedMimeType();
@@ -250,7 +243,7 @@ function beginSegment(activeStream) {
     const stillCurrent = recording.instance === instance;
     if (stillCurrent) { recording.instance = null; clearTimeout(recording.rotateTimer); }
     const blob = new Blob(chunks, {type:mimeType.split(';')[0]});
-    if (blob.size) { recording.segments += 1; enqueueUpload(blob, 'segment'); }
+    if (blob.size) enqueueUpload(blob, 'segment');
     if (stillCurrent && recording.active && stream?.active) beginSegment(stream);
   };
   recording.instance = instance;
@@ -262,7 +255,6 @@ function beginSegment(activeStream) {
 }
 function stopRecording() {
   recording.active = false;
-  clearInterval(recording.clockTimer);
   clearTimeout(recording.rotateTimer);
   clearInterval(recording.snapshotTimer);
   recording.snapshotTimer = 0;
@@ -270,18 +262,14 @@ function stopRecording() {
   const instance = recording.instance;
   recording.instance = null;
   if (instance && instance.state !== 'inactive') instance.stop();
-  setBadge('off', 'paused');
 }
 function startRecording(activeStream) {
   stopRecording();
   if (!activeStream?.active) return;
-  if (!supportedMimeType()) { setBadge('error', 'recording unsupported'); return; }
+  if (!supportedMimeType()) return;
   recording.active = true;
-  recording.startedAt = Date.now();
   beginSegment(activeStream);
   watchMotion();
-  recording.clockTimer = setInterval(badgeClock, 1000);
-  badgeClock();
   recording.snapshotTimer = setInterval(() => captureSnapshot(), 1000);
   captureSnapshot();
 }
@@ -355,11 +343,9 @@ function clearSettings() {
   byId('segment-seconds').value = String(config.segmentSeconds);
   byId('sensitivity').value = String(config.sensitivity);
 }
-byId('rec-badge').addEventListener('click', openSettings);
 byId('relay-save').addEventListener('click', saveSettings);
 byId('relay-clear').addEventListener('click', clearSettings);
 loadConfig();
-setBadge('off', 'paused');
 enableButton.addEventListener('click', openCamera);
 shutter.addEventListener('click', takePhoto);
 flipButton.addEventListener('click', async () => {
