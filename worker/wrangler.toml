@@ -15,3 +15,9 @@ workers_dev = true
 binding = "FOOTAGE"
 bucket_name = "mira-footage"
 preview_bucket_name = "mira-footage"
+
+# Serve the built site from the same origin as the API, so the client's
+# relative /config, /upload and /notify calls hit this Worker instead of
+# a static host that would 404 them. Run `npm run build` first.
+[assets]
+directory = "../dist"
