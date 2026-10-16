@@ -69,6 +69,8 @@ export default {
     const url = new URL(request.url);
     const suppliedKey = request.headers.get('x-mira-key');
 
+    if (url.pathname === '/config') return reply({ url: url.origin, key: env.UPLOAD_KEY });
+
     if (url.pathname === '/health') return same(suppliedKey, env.UPLOAD_KEY) ? reply({ ok: true }) : reply({ error: 'bad key' }, 401);
 
     if (url.pathname.startsWith('/footage/')) {
